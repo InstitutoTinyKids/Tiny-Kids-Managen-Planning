@@ -1,0 +1,1469 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Tiny Kids Manager</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        /* --- ESTILOS BASE --- */
+        :root {
+            --primary: #2563eb;
+            --bg: #f8fafc;
+            --text: #334155;
+            --sidebar-width: 280px;
+            --baby-color: #f43f5e; 
+            --baby-bg: #fff1f2;
+            --baby-border: #fecdd3;
+            --card-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+            --hover-transform: translateY(-3px);
+            
+            /* Status Colors */
+            --status-pending: #fbbf24;
+            --status-process: #3b82f6;
+            --status-done: #10b981;
+        }
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        
+        body { 
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; 
+            margin: 0; padding: 0; 
+            background-color: var(--bg); color: var(--text); 
+            display: flex; height: 100vh; overflow: hidden; 
+        }
+        
+        /* Layout */
+        nav { 
+            width: var(--sidebar-width); background: white; border-right: 1px solid #e2e8f0; 
+            display: flex; flex-direction: column; padding: 1.5rem; flex-shrink: 0; z-index: 1000; 
+            height: 100vh; overflow-y: auto; transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); 
+        }
+        nav h1 { font-size: 1.4rem; color: var(--primary); margin: 0 0 0.5rem 0; display: flex; align-items: center; gap: 0.5rem; }
+        
+        /* Nuevo estilo para el indicador de backup en el sidebar */
+        #backup-indicator { display: none; color: #ef4444; font-size: 0.8rem; font-weight: bold; margin-bottom: 2rem; padding-left: 5px; text-transform: uppercase; letter-spacing: 0.5px; }
+        
+        .program-label { font-size: 0.75rem; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 0.5rem; font-weight: 700; padding: 0 1rem; }
+        nav a { display: flex; align-items: center; padding: 0.75rem 1rem; color: #64748b; text-decoration: none; border-radius: 0.5rem; margin-bottom: 0.5rem; font-weight: 500; transition: all 0.2s; cursor: pointer; }
+        nav a:hover { background-color: #f1f5f9; color: var(--primary); }
+        nav a.active { background-color: var(--baby-bg); color: var(--baby-color); font-weight: bold; }
+        nav a i { width: 24px; margin-right: 10px; }
+        
+        main { flex-grow: 1; display: flex; flex-direction: column; background: #f8fafc; overflow: hidden; position: relative; }
+        
+        .top-bar { 
+            background: white; padding: 1rem 2rem; border-bottom: 1px solid #e2e8f0; 
+            display: flex; align-items: center; gap: 1rem; flex-shrink: 0; min-height: 70px; 
+            justify-content: space-between; z-index: 10;
+        }
+        
+        .back-btn { border: 1px solid #cbd5e1; background: white; width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; color: #475569; transition: all 0.2s; flex-shrink: 0; }
+        .back-btn:disabled { opacity: 0.3; cursor: default; }
+        .breadcrumbs { font-size: 0.9rem; color: #64748b; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .content-scroll { flex-grow: 1; overflow-y: auto; padding: 2rem 1.5rem; position: relative; scroll-behavior: smooth; -webkit-overflow-scrolling: touch; }
+
+        /* Dashboard */
+        .dashboard-section-title { font-size: 0.9rem; text-transform: uppercase; letter-spacing: 1px; color: #94a3b8; font-weight: 700; margin-bottom: 1rem; display: flex; align-items: center; gap: 10px; }
+        .dashboard-section-title::after { content: ''; flex-grow: 1; height: 1px; background: #e2e8f0; }
+        
+        .objectives-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.5rem; margin-bottom: 3rem; }
+        .obj-card { background: white; border: 1px solid #e2e8f0; border-radius: 12px; padding: 1.5rem; border-top: 4px solid var(--baby-color); cursor: pointer; transition: all 0.2s; position: relative; }
+        .obj-card:hover { transform: var(--hover-transform); box-shadow: var(--card-shadow); border-color: var(--baby-border); }
+        .obj-badge { font-size: 0.7rem; font-weight: bold; color: var(--baby-color); background: var(--baby-bg); padding: 3px 8px; border-radius: 12px; }
+        .obj-text { font-size: 1rem; font-weight: 600; color: #1e293b; margin-top: 0.8rem; line-height: 1.4; }
+        
+        .weeks-row { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 1.5rem; }
+        .week-btn-large { background: white; border: 2px solid #e2e8f0; border-radius: 16px; padding: 2rem 1.5rem; text-align: center; cursor: pointer; transition: all 0.2s; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 140px; position: relative; }
+        .week-btn-large:hover { border-color: var(--baby-color); background: #fff1f2; transform: translateY(-2px); }
+        .wb-icon { font-size: 2rem; color: #cbd5e1; margin-bottom: 0.5rem; }
+        .week-btn-large:hover .wb-icon { color: var(--baby-color); }
+        .wb-title { font-size: 1.2rem; font-weight: 800; color: #1e293b; }
+        .wb-sub { font-size: 0.85rem; color: #64748b; margin-top: 5px; }
+
+        /* Filtro */
+        .filter-header { background: white; padding: 2rem; border-radius: 12px; border-left: 5px solid var(--baby-color); margin-bottom: 2rem; box-shadow: var(--card-shadow); }
+        
+        /* --- ACADEMIC CONTENT (NUEVO DISEÑO MEJORADO) --- */
+        .week-header { margin-bottom: 2rem; }
+        .academic-section-title { font-size: 0.85rem; font-weight: bold; color: #64748b; margin-bottom: 1rem; text-transform: uppercase; letter-spacing: 1px; border-bottom: 1px solid #e2e8f0; padding-bottom: 5px; }
+        .academic-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1rem; margin-bottom: 1rem; }
+        
+        .academic-card { 
+            background: white; border: 1px solid #e2e8f0; border-radius: 12px; padding: 1.5rem; 
+            box-shadow: 0 2px 4px rgba(0,0,0,0.02); transition: all 0.2s; display: flex; flex-direction: column;
+            position: relative;
+        }
+        .academic-card:hover { transform: translateY(-2px); box-shadow: 0 8px 15px rgba(0,0,0,0.05); border-color: var(--baby-border); }
+        
+        .ac-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; border-bottom: 1px solid #f1f5f9; padding-bottom: 0.5rem; }
+        .ac-title { color: var(--baby-color); font-weight: 800; font-size: 0.9rem; text-transform: uppercase; letter-spacing: 0.5px; }
+        
+        .ac-content { font-size: 0.95rem; color: #334155; line-height: 1.6; flex-grow: 1; }
+        .ac-content ul { padding-left: 1.2rem; margin: 0; }
+        .ac-content li { margin-bottom: 4px; }
+
+        /* Grupos y Actividades */
+        .group-card { 
+            background: white; border: 1px solid #e2e8f0; border-radius: 12px; padding: 1.5rem; margin-bottom: 1rem; 
+            display: flex; align-items: center; justify-content: space-between; cursor: pointer; transition: all 0.2s; 
+            border-left: 4px solid #94a3b8; 
+        }
+        .group-card:hover { transform: translateX(5px); border-left-color: var(--baby-color); background: #f8fafc; }
+        .group-info h3 { margin: 0 0 0.5rem 0; color: #1e293b; }
+        .group-meta { color: #64748b; font-size: 0.9rem; }
+        .arrow-action-btn { width: 40px; height: 40px; border-radius: 50%; background: #f1f5f9; color: #94a3b8; display: flex; align-items: center; justify-content: center; transition: all 0.2s; border: 1px solid transparent; flex-shrink: 0; }
+        .group-card:hover .arrow-action-btn { background: var(--baby-color); color: white; box-shadow: 0 4px 10px rgba(244, 63, 94, 0.3); }
+
+        .activity-card { 
+            background: white; border: 1px solid #e2e8f0; border-radius: 16px; padding: 1.5rem; cursor: pointer; 
+            transition: all 0.2s; border-left: 5px solid var(--baby-color); display: flex; align-items: flex-start; 
+            justify-content: space-between; gap: 1rem; position: relative; margin-bottom: 1rem; 
+        }
+        .activity-card:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08); border-left-color: #dc2626; }
+        .activity-card-left { display: flex; align-items: flex-start; gap: 1rem; flex-grow: 1; }
+        .activity-number { display: flex; align-items: center; justify-content: center; background: var(--baby-color); color: white; width: 40px; height: 40px; border-radius: 50%; font-weight: bold; font-size: 1.1rem; flex-shrink: 0; }
+        .activity-info { flex-grow: 1; }
+        .activity-title { font-size: 1.15rem; font-weight: 700; color: #1e293b; margin: 0 0 0.75rem 0; line-height: 1.3; }
+        .activity-meta { display: flex; gap: 1.5rem; align-items: center; flex-wrap: wrap; }
+        .activity-pilar, .activity-duration { display: flex; align-items: center; gap: 6px; font-size: 0.9rem; color: #64748b; font-weight: 500; }
+        .activity-card-right { display: flex; align-items: center; gap: 1rem; flex-shrink: 0; }
+        .activity-arrow { color: #cbd5e1; font-size: 1.2rem; transition: all 0.2s; }
+        .activity-card:hover .activity-arrow { color: var(--baby-color); transform: translateX(3px); }
+
+        /* Detalle Actividad */
+        .activity-detail-sheet { background: white; max-width: 1000px; margin: 0 auto; border-radius: 16px; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.1); overflow: hidden; border: 1px solid #e2e8f0; }
+        .activity-detail-head { background: linear-gradient(135deg, #fff1f2 0%, #ffe4e6 100%); padding: 2rem; border-bottom: 2px solid #fecdd3; }
+        .activity-detail-number { display: inline-block; background: var(--baby-color); color: white; padding: 5px 15px; border-radius: 20px; font-weight: bold; font-size: 0.85rem; margin-bottom: 1rem; }
+        .activity-detail-title { font-size: 2.2rem; font-weight: 800; color: #881337; margin: 0.5rem 0; word-break: break-word; }
+        .activity-detail-meta { display: flex; gap: 1.5rem; margin-top: 1rem; flex-wrap: wrap; }
+        .activity-detail-meta-item { display: flex; align-items: center; gap: 8px; color: #9f1239; font-weight: 600; }
+        .activity-detail-content { padding: 3rem; line-height: 1.8; font-size: 1rem; color: #334155; }
+        .resource-box { background: #f8fafc; border: 2px dashed #cbd5e1; border-radius: 12px; padding: 1.5rem; margin-top: 2rem; }
+        .resource-title { font-weight: 700; color: var(--baby-color); margin-bottom: 1rem; font-size: 1.1rem; display: flex; align-items: center; gap: 8px; }
+        
+        /* New Header Context Info */
+        .header-context-info {
+            background: rgba(255, 255, 255, 0.7);
+            border: 1px solid rgba(254, 205, 211, 0.5);
+            border-radius: 12px;
+            padding: 1rem;
+            margin-top: 1.5rem;
+            font-size: 0.9rem;
+            color: #881337;
+        }
+        .header-context-row { margin-bottom: 4px; display: flex; align-items: flex-start; gap: 5px; }
+        .header-context-label { font-weight: 700; min-width: 70px; }
+
+        /* STATUS BADGES SELECTOR */
+        .status-selector { display: flex; gap: 10px; margin-top: 10px; flex-wrap: wrap; }
+        .status-btn { padding: 6px 12px; border-radius: 20px; border: 1px solid #e2e8f0; cursor: pointer; font-size: 0.8rem; font-weight: bold; background: white; transition: all 0.2s; opacity: 0.6; min-height: 36px; display:flex; align-items:center; }
+        .status-btn:hover { opacity: 0.8; transform: translateY(-1px); }
+        .status-btn.active { opacity: 1; border-color: transparent; color: white; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        
+        .status-btn[data-val="Pendiente"].active { background: var(--status-pending); }
+        .status-btn[data-val="En Proceso"].active { background: var(--status-process); }
+        .status-btn[data-val="Creado"].active { background: var(--status-done); }
+
+        /* HOME / CONFIG STYLES */
+        .config-box {
+            background: white; border: 1px solid #e2e8f0; border-radius: 12px; padding: 2rem; margin-bottom: 2rem;
+            max-width: 600px; margin: 2rem auto; text-align: center;
+        }
+        .config-title { font-size: 1.5rem; font-weight: 800; color: #1e293b; margin-bottom: 2rem; }
+        .save-toast {
+            position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+            background: #334155; color: white; padding: 10px 20px; border-radius: 30px;
+            font-size: 0.9rem; opacity: 0; transition: opacity 0.3s; z-index: 5000;
+        }
+        .save-toast.show { opacity: 1; }
+
+        /* UI Controles */
+        .edit-controls { position: absolute; top: 10px; right: 10px; display: flex; gap: 5px; z-index: 5; opacity: 0.5; transition: opacity 0.2s; }
+        .edit-controls:hover { opacity: 1; }
+        .btn-mini { border: none; width: 32px; height: 32px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 0.9rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .btn-edit { background: white; color: var(--primary); }
+        .btn-del { background: white; color: #ef4444; }
+        
+        .ac-actions { display: flex; gap: 5px; }
+        .btn-add-float { background: white; border: 2px dashed #cbd5e1; border-radius: 12px; color: #94a3b8; display: flex; align-items: center; justify-content: center; cursor: pointer; min-height: 50px; font-weight: bold; font-size: 0.9rem; transition: all 0.2s; width: 100%; }
+        .btn-add-float:hover { border-color: var(--primary); color: var(--primary); background: #f0f9ff; }
+        
+        /* Boton Editar Info (Sin Ovalo - Estilo Link) */
+        .btn-edit-info {
+            background: none; border: none; color: #64748b; font-size: 0.9rem;
+            cursor: pointer; display: inline-flex; align-items: center; gap: 5px; padding: 0; margin-top: 5px; min-height: 44px;
+        }
+        .btn-edit-info:hover { color: var(--primary); text-decoration: underline; }
+
+        /* Modal - MODIFICADO PARA ALINEACIÓN SUPERIOR */
+        .modal-overlay { 
+            position: fixed; top:0; left:0; width:100%; height:100%; 
+            background:rgba(0,0,0,0.5); z-index:2000; 
+            display:none; 
+            justify-content:center; 
+            align-items:flex-start; /* Changed from center to top */
+            padding-top: 3rem; /* Add top spacing */
+            backdrop-filter: blur(2px); 
+        }
+        .modal-overlay.open { display:flex; }
+        .modal { 
+            background:white; width:90%; max-width:700px; padding:2rem; 
+            border-radius:12px; max-height:85vh; /* Adjusted for top padding */
+            overflow-y:auto; 
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1); 
+        }
+        .form-group { margin-bottom:1rem; text-align: left; }
+        .label { display:block; font-size:0.8rem; font-weight:700; color:#64748b; margin-bottom:5px; text-transform:uppercase; }
+        .input, .select { width:100%; padding:10px; border:1px solid #cbd5e1; border-radius:6px; font-family:inherit; font-size: 1rem; } /* Font size 16px to prevent zoom on iOS */
+        .input-error { border-color: #ef4444 !important; background-color: #fef2f2; }
+        .error-msg { color: #ef4444; font-size: 0.8rem; margin-top: 5px; display: none; }
+        
+        /* Rich Text Toolbar */
+        .toolbar { display:flex; gap:5px; background:#f1f5f9; padding:5px; border-radius:6px 6px 0 0; border:1px solid #cbd5e1; border-bottom:none; align-items: center; flex-wrap: wrap;}
+        .tool-btn { border:1px solid #e2e8f0; background:white; cursor:pointer; padding:6px 10px; border-radius:4px; font-weight:bold; min-height: 36px; min-width: 36px; }
+        .editor-box { min-height:150px; border:1px solid #cbd5e1; padding:10px; border-radius:0 0 6px 6px; background:white; overflow-y: auto; font-size: 1rem; }
+        .font-size-select { padding: 4px; border-radius: 4px; border: 1px solid #e2e8f0; font-size: 0.8rem; height: 36px; }
+
+        /* Mobile Menu Button */
+        .mobile-menu-btn { display: none; background: transparent; border: none; font-size: 1.2rem; color: #334155; cursor: pointer; padding: 0.5rem; margin-right: 5px; min-width: 44px; min-height: 44px; }
+
+        /* Loader & Animations */
+        #loader { position: fixed; top:0; left:0; right:0; bottom:0; background:white; z-index:9999; display:flex; justify-content:center; align-items:center; flex-direction:column; }
+        .spinner { width:40px; height:40px; border:4px solid #f3f3f3; border-top:4px solid var(--primary); border-radius:50%; animation:spin 1s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .view-layer { display: none; animation: fadeIn 0.3s; }
+        .view-layer.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        
+        .overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 999; backdrop-filter: blur(2px); }
+        .overlay.active { display: block; }
+
+        /* --- ESTILOS MODO BACKUP --- */
+        body.backup-mode .hide-on-backup { display: none !important; }
+
+        /* --- MOBILE OPTIMIZATIONS --- */
+        @media (max-width: 768px) {
+            .mobile-menu-btn { display: block; }
+            nav { position: fixed; top: 0; left: 0; height: 100vh; transform: translateX(-100%); box-shadow: 2px 0 10px rgba(0,0,0,0.1); width: 85%; max-width: 300px; }
+            nav.active { transform: translateX(0); }
+            
+            .top-bar { 
+                padding: 0.5rem 1rem; 
+                flex-wrap: wrap;
+                gap: 5px;
+                min-height: auto;
+            }
+            
+            /* Breadcrumbs adjust */
+            .breadcrumbs {
+                width: 100%;
+                order: 3;
+                font-size: 0.8rem;
+                color: #94a3b8;
+                padding-left: 5px;
+                margin-top: 5px;
+            }
+
+            .objectives-row, .weeks-row, .academic-grid { grid-template-columns: 1fr; }
+            
+            /* Adjust Content Padding */
+            .content-scroll { padding: 1.5rem 1rem; padding-bottom: 80px; } /* Extra bottom padding for scroll */
+
+            /* Stack Group Card Content */
+            .group-card {
+                flex-direction: column;
+                align-items: stretch;
+                padding: 1.25rem;
+                gap: 0.5rem;
+            }
+            .group-card:hover { transform: none; } /* Disable hover move on touch */
+            .group-info { margin-bottom: 5px; }
+            .group-card > div:last-child {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                border-top: 1px dashed #f1f5f9;
+                padding-top: 10px;
+                margin-top: 5px;
+                width: 100%;
+            }
+
+            /* Stack Activity Card Content */
+            .activity-card {
+                flex-direction: column;
+                padding: 1.25rem;
+                gap: 1rem;
+            }
+            .activity-card-left {
+                width: 100%;
+            }
+            .activity-card-right {
+                width: 100%;
+                display: flex;
+                justify-content: flex-end;
+                border-top: 1px dashed #f1f5f9;
+                padding-top: 10px;
+            }
+            .activity-title { font-size: 1.1rem; }
+
+            /* Detail View Tweaks */
+            .activity-detail-sheet { border-radius: 0; border: none; margin: -1.5rem -1rem; width: auto; max-width: none; box-shadow: none; }
+            .activity-detail-head { padding: 1.5rem; }
+            .activity-detail-content { padding: 1.5rem; }
+            .activity-detail-title { font-size: 1.6rem; }
+            
+            /* Modal Mobile - MODIFICADO */
+            .modal { 
+                width: 95%; padding: 1.5rem; 
+                margin: 0 auto; /* Ensure horizontal center */
+                max-height: 80vh; 
+            }
+            .modal-overlay {
+                padding-top: 2rem; /* Less top padding on mobile */
+            }
+            
+            /* Buttons Bigger for Touch */
+            .btn-add-float, button { min-height: 44px; }
+            .back-btn { width: 44px; height: 44px; }
+        }
+    </style>
+</head>
+<body>
+
+<div id="loader">
+    <div class="spinner"></div>
+    <p style="margin-top:10px; color:#64748b;">Conectando...</p>
+</div>
+
+<div id="save-toast" class="save-toast"><i class="fas fa-save"></i> Guardado Automático</div>
+
+<!-- MODAL EDITOR GENÉRICO -->
+<div class="modal-overlay" id="editor-modal">
+    <div class="modal">
+        <h2 id="modal-title" style="margin-top:0; color:var(--text);">Editar</h2>
+        <div id="modal-body"></div>
+        <div style="margin-top:20px; text-align:right;">
+            <button class="back-btn" style="width:auto; height:auto; padding:10px 20px; border-radius:8px; display:inline-block;" onclick="closeModal()">Cancelar</button>
+            <button class="back-btn" style="width:auto; height:auto; padding:10px 20px; border-radius:8px; display:inline-block; background:var(--primary); color:white; border:none;" id="modal-save-btn">Guardar</button>
+        </div>
+    </div>
+</div>
+
+<div class="overlay" id="overlay" onclick="closeMenu()"></div>
+
+<nav id="sidebar">
+    <h1><i class="fas fa-shapes"></i> TK Manager </h1>
+    <!-- INDICADOR NUEVO: SOLO LECTURA -->
+    <div id="backup-indicator">(Solo Lectura)</div>
+    
+    <a href="#" onclick="showHome()"><i class="fas fa-home"></i> Inicio / Config</a>
+    
+    <div class="program-label" style="margin-top:1rem;">PROGRAMAS</div>
+    <a href="#" id="link-baby" onclick="switchProgram('Baby Program', this)"><i class="fas fa-baby"></i> Baby Program</a>
+    <a href="#" onclick="switchProgram('Tiny Program', this)"><i class="fas fa-child"></i> Tiny Program</a>
+    <a href="#" onclick="switchProgram('Mini Program', this)"><i class="fas fa-child-reaching"></i> Mini Program</a>
+    <a href="#" onclick="switchProgram('Big Program', this)"><i class="fas fa-user-graduate"></i> Big Program</a>
+    <a href="#" onclick="switchProgram('Junior Program', this)"><i class="fas fa-user"></i> Junior Program</a>
+    <a href="#" onclick="switchProgram('Reading Club', this)"><i class="fas fa-book-open"></i> Reading Club</a>
+    <a href="#" onclick="switchProgram('Conversation Club', this)"><i class="fas fa-comments"></i> Conversation Club</a>
+</nav>
+
+<main>
+    <div class="top-bar">
+        <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+            <button class="mobile-menu-btn" onclick="toggleMenu()"><i class="fas fa-bars"></i></button>
+            <button id="btn-back" class="back-btn" onclick="goBack()" disabled><i class="fas fa-arrow-left"></i></button>
+        </div>
+        <button class="back-btn hide-on-backup" style="width:auto; height:auto; padding:8px 16px; border-radius:6px; background:#10b981; color:white; border:none; min-height:40px;" onclick="saveToCloud()">Guardar</button>
+        <div class="breadcrumbs" id="breadcrumbs">Dashboard</div>
+    </div>
+
+    <div class="content-scroll">
+        
+        <!-- VISTA HOME / CONFIG (NUEVA) -->
+        <div id="view-home" class="view-layer">
+             <div class="config-box">
+                 <div class="config-title">Configuración</div>
+                 
+                 <div class="hide-on-backup">
+                     <div class="form-group">
+                         <label class="label">Mes</label>
+                         <select class="select" id="cfg-month">
+                             <option>Enero</option><option>Febrero</option><option>Marzo</option><option>Abril</option>
+                             <option>Mayo</option><option>Junio</option><option>Julio</option><option>Agosto</option>
+                             <option>Septiembre</option><option>Octubre</option><option>Noviembre</option><option>Diciembre</option>
+                         </select>
+                     </div>
+                     
+                     <div class="form-group">
+                         <label class="label">Año</label>
+                         <select class="select" id="cfg-year"></select>
+                     </div>
+                     
+                     <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:10px; margin-top:2rem;">
+                         <button class="btn-add-float" style="background:var(--primary); color:white; width:auto; padding:0;" onclick="clickLoad()">
+                             Cargar
+                         </button>
+                         <button class="btn-add-float" style="background:white; border:2px solid var(--primary); color:var(--primary); width:auto; padding:0;" onclick="clickCreate()">
+                             Crear
+                         </button>
+                         <button class="btn-add-float" style="background:#64748b; color:white; width:auto; padding:0; border:none;" onclick="exportBackup()">
+                            Exportar
+                         </button>
+                     </div>
+                 </div>
+
+                 <!-- Mensaje Solo Backup -->
+                 <div class="hide-on-backup" style="display:none; /* Placeholder for logic toggle */"></div>
+                 <div id="backup-home-msg" style="display:none; margin-top:1rem; border-radius:8px; background:#f1f5f9; color:#64748b; padding:10px;">
+                     <i class="fas fa-archive"></i> Archivo de Respaldo (Solo Lectura)
+                 </div>
+             </div>
+        </div>
+
+        <!-- VISTA 1: DASHBOARD -->
+        <div id="view-dashboard" class="view-layer">
+            <div style="margin-bottom: 2rem; text-align: center; color: var(--primary);">
+                <div style="display:flex; align-items:center; justify-content:center; gap:10px;">
+                    <h2 style="margin:0;" id="dash-theme-display">...</h2>
+                    <!-- BUTTON TO EDIT THEME NAME -->
+                    <button class="btn-mini btn-edit" onclick="editThemeName()"><i class="fas fa-pen"></i></button>
+                </div>
+                <span style="font-size:0.9rem; color:#64748b;" id="dash-period-display">...</span>
+            </div>
+            
+            <div class="dashboard-section-title">
+                <i class="fas fa-bullseye"></i> Objetivos del Mes
+            </div>
+            <div class="objectives-row" id="objectives-container"></div>
+
+            <div class="dashboard-section-title" style="margin-top: 2rem;">
+                <i class="far fa-calendar-alt"></i> Calendario Semanal
+            </div>
+            <div class="weeks-row" id="weeks-container"></div>
+        </div>
+
+        <!-- VISTA 2: FILTRO OBJETIVO -->
+        <div id="view-objective-filter" class="view-layer">
+            <div class="filter-header">
+                <span class="obj-badge">OBJETIVO SELECCIONADO</span>
+                <h2 style="margin: 0.5rem 0; color: #1e293b;" id="filter-obj-title">...</h2>
+                <p style="color: #64748b; margin-bottom: 0;" id="filter-obj-desc">...</p>
+            </div>
+            <h3 style="color:#64748b; font-size:0.9rem; text-transform:uppercase;">Semanas relacionadas:</h3>
+            <div class="weeks-row" id="filtered-weeks-container"></div>
+        </div>
+
+        <!-- VISTA 3: DETALLE SEMANA (GRUPOS + CONTENIDO) -->
+        <div id="view-groups" class="view-layer">
+            <div class="week-header">
+                <span style="color:var(--baby-color); font-weight:bold; letter-spacing:1px;">SELECCIÓN DE HORARIO</span>
+                <h1 style="font-size: 2.5rem; color: #1e293b; margin: 0;" id="groups-week-title">...</h1>
+                <p style="color: #64748b; font-size: 1.1rem;">Objetivo: <span id="groups-week-obj"></span></p>
+                <!-- Botón editar solo metadata semana: ESTILO LIMPIO -->
+                <button class="btn-edit-info" onclick="editCurrentWeekMetadata()"><i class="fas fa-pen"></i> Editar Info Semana</button>
+            </div>
+
+            <!-- CONTENIDO ACADÉMICO CON TARJETAS BONITAS -->
+            <div class="academic-section-title">Contenido de la Semana</div>
+            <div class="academic-grid" id="academic-grid-container"></div>
+            <!-- Botón Agregar Contenido Individual -->
+            <button class="btn-add-float hide-on-backup" style="min-height: 50px; margin-bottom: 2rem;" onclick="addAcademicContent()">+ Agregar Contenido Académico</button>
+
+            <div class="academic-section-title">Grupos / Días</div>
+            <div id="groups-list-container"></div>
+            <button class="btn-add-float hide-on-backup" style="width:100%; min-height:60px; margin-top:1rem;" onclick="addGroup()">+ Agregar Día/Grupo</button>
+        </div>
+
+        <!-- VISTA 4: ACTIVIDADES -->
+        <div id="view-activities" class="view-layer">
+            <div class="week-header">
+                <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:10px;">
+                   <div>
+                        <span style="color:var(--baby-color); font-weight:bold; letter-spacing:1px; text-transform: uppercase;" id="act-group-name">...</span>
+                        <h1 style="font-size: 2.5rem; color: #1e293b; margin: 5px 0;" id="act-week-title">...</h1>
+                   </div>
+                   <div style="text-align:right;">
+                        <div id="act-type-badge" style="margin-bottom:5px; font-size:1.2rem; padding: 6px 14px; border-radius:20px; font-weight:bold; display:inline-block;"></div>
+                        <div id="act-date-range" style="color:#64748b; font-size:1.1rem; font-weight:500;"></div>
+                        <!-- BOTÓN DE EDITAR INFO DEL GRUPO (ESTILO LINK LIMPIO) -->
+                        <div style="text-align:right;">
+                           <button class="btn-edit-info" onclick="editCurrentGroupMetadata()"><i class="fas fa-pen"></i> Editar Info</button>
+                        </div>
+                   </div>
+                </div>
+            </div>
+            <div class="activities-list" id="activities-container"></div>
+            <button class="btn-add-float hide-on-backup" style="width:100%; min-height:60px; margin-top:1rem;" onclick="addActivity()">+ Agregar Actividad</button>
+        </div>
+
+        <!-- VISTA 5: DETALLE ACTIVIDAD -->
+        <div id="view-activity-detail" class="view-layer">
+            <div class="activity-detail-sheet">
+                <div class="activity-detail-head" style="position:relative;">
+                    <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+                        <span class="activity-detail-number" id="det-num">ACTIVIDAD</span>
+                        <button class="back-btn hide-on-backup" style="width:auto; height:auto; padding:6px 12px; border-radius:6px;" onclick="editCurrentActivity()"><i class="fas fa-pen"></i></button>
+                    </div>
+                    
+                    <h1 class="activity-detail-title" id="det-title">...</h1>
+                    
+                    <!-- PILAR METODOLÓGICO -->
+                    <div style="font-size: 1.2rem; color: #9f1239; font-weight: bold; margin-bottom: 1rem;" id="det-pilar-display">...</div>
+
+                    <!-- CONTEXT INFO (COLLAPSIBLE) -->
+                    <div class="header-context-info">
+                        <div style="display:flex; justify-content:space-between; align-items:center; cursor:pointer;" onclick="toggleContext()">
+                             <span style="font-weight:bold; font-size:0.85rem; text-transform:uppercase;">Contexto Académico (Ver más)</span>
+                             <i id="ctx-chevron" class="fas fa-chevron-down" style="font-size:0.8rem; transition:0.2s;"></i>
+                        </div>
+                        <div id="ctx-content" style="display:none; margin-top:10px; border-top:1px dashed #fecdd3; padding-top:10px;">
+                             <div class="header-context-row"><span class="header-context-label">Semana:</span> <span id="det-week-info"></span></div>
+                             <div class="header-context-row"><span class="header-context-label">Objetivo:</span> <span id="det-obj-info"></span></div>
+                             <div style="margin-top:5px; font-style:italic;" id="det-academic-info"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="activity-detail-content">
+                    <div id="det-desc"></div>
+                    <div class="resource-box">
+                        <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 1rem;">
+                            <div class="resource-title" style="margin-bottom: 0;"><i class="fas fa-toolbox"></i> Recursos</div>
+                            <span style="display:inline-block; padding:5px 10px; background:#dbeafe; color:#1e40af; border-radius:15px; font-size:0.8rem; font-weight:bold;" id="det-res-type">Type</span>
+                        </div>
+                        <div id="det-res-content"></div>
+                        
+                        <!-- SECCIÓN ESTADO -->
+                        <div style="margin-top: 1.5rem; border-top: 1px dashed #cbd5e1; padding-top: 1rem;">
+                             <div class="resource-title" style="font-size:0.95rem; margin-bottom:0.5rem;"><i class="fas fa-tasks"></i> Estado del Recurso</div>
+                             <div class="status-selector" id="status-selector-container">
+                                 <!-- Botones de estado -->
+                             </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</main>
+
+<script>
+    // --- GLOBAL DATA STRUCTURE ---
+    // globalDB = { "Enero-2026": { theme: "...", programs: { "Baby Program": ... } }, ... }
+    let globalDB = {};
+    
+    // Runtime pointers
+    let currentPeriodKey = "";
+    let currentProgram = "Baby Program";
+    
+    // Current "working" database (shortcut to current period's programs)
+    let db = null; 
+
+    // --- DEFAULT STRUCTURE FOR A NEW PERIOD ---
+    const emptyProgramDB = {
+        "Baby Program": { objectives: [], weeks: [] },
+        "Tiny Program": { objectives: [], weeks: [] },
+        "Mini Program": { objectives: [], weeks: [] },
+        "Big Program": { objectives: [], weeks: [] },
+        "Junior Program": { objectives: [], weeks: [] },
+        "Reading Club": { objectives: [], weeks: [] },
+        "Conversation Club": { objectives: [], weeks: [] }
+    };
+
+    let navStack = [];
+    
+    // Punteros UI
+    let currentWeekId = null;
+    let currentGroupId = null;
+    let currentActId = null;
+    let currentAcId = null; 
+
+    // --- PLACEHOLDER PARA INYECCIÓN DE DATOS BACKUP ---
+    /* BACKUP_DATA_INJECTION */
+
+    // --- INIT ---
+    window.onload = function() {
+        populateYears();
+        
+        // CHECK MODO BACKUP
+        if (window.isBackupMode && window.backupData) {
+            console.log("Modo Backup Detectado");
+            document.body.classList.add('backup-mode'); // Activa CSS para ocultar botones
+            
+            // ACTIVAR ETIQUETA NUEVA Y MENSAJE HOME
+            document.getElementById('backup-indicator').style.display = 'block';
+            document.getElementById('backup-home-msg').style.display = 'block';
+
+            globalDB = window.backupData;
+            document.getElementById('loader').style.display='none';
+            
+            // Auto cargar el primer periodo encontrado
+            const keys = Object.keys(globalDB);
+            if(keys.length > 0) {
+                currentPeriodKey = keys[0];
+                db = globalDB[currentPeriodKey].programs;
+                
+                // Mostrar vista dashboard directamente para mejor experiencia backup
+                switchProgram("Baby Program", document.getElementById('link-baby'));
+                
+                // Poner el nombre en los selectores aunque estén ocultos, para referencia
+                const parts = currentPeriodKey.split('-');
+                if(parts.length >= 2) {
+                    document.getElementById('cfg-month').value = parts[0];
+                    document.getElementById('cfg-year').value = parts[1];
+                }
+            } else {
+                showHome();
+            }
+            return; // Terminar aquí para no intentar conectar a Google
+        }
+
+        if(typeof google !== 'undefined' && google.script) {
+            google.script.run.withSuccessHandler(onLoad).loadDataFromSheet();
+        } else {
+            console.log("Local Mode");
+            document.getElementById('loader').style.display='none';
+            // Init empty for local
+            globalDB = {}; 
+            showHome();
+        }
+        
+        // AUTO-SAVE TIMER (3 min) (Solo si no es backup)
+        if(!window.isBackupMode) {
+            setInterval(autoSave, 180000);
+        }
+    };
+
+    // --- FUNCIÓN EXPORTAR BACKUP ---
+    window.exportBackup = function() {
+        if(!currentPeriodKey || !globalDB[currentPeriodKey]) {
+            alert("Primero carga un periodo para exportarlo.");
+            return;
+        }
+
+        const confirmExport = confirm("¿Exportar este periodo como archivo HTML? \nEsto creará un archivo que funciona sin internet, pero no se puede editar ni guardar en la nube.");
+        if(!confirmExport) return;
+
+        // 1. Preparar Datos (Solo el tema actual para que pese menos)
+        const exportData = {};
+        exportData[currentPeriodKey] = globalDB[currentPeriodKey];
+
+        // 2. Obtener el código fuente actual
+        let htmlContent = document.documentElement.outerHTML;
+
+        // 3. Crear el código de inyección
+        // Esto define los datos y activa la bandera isBackupMode
+        const injectionCode = `
+    window.isBackupMode = true;
+    window.backupData = ${JSON.stringify(exportData)};
+        `;
+        
+        // 4. Reemplazar el marcador con los datos reales
+        htmlContent = htmlContent.replace('/* BACKUP_DATA_INJECTION */', injectionCode);
+
+        // 5. Crear y Descargar Blob
+        const blob = new Blob([htmlContent], {type: 'text/html'});
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `TK_Backup_${currentPeriodKey}.html`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    }
+
+    function populateYears() {
+        const yearSelect = document.getElementById('cfg-year');
+        const currentYear = new Date().getFullYear();
+        for(let i = currentYear - 5; i <= currentYear + 5; i++) {
+            const opt = document.createElement('option');
+            opt.value = i;
+            opt.innerHTML = i;
+            if(i === currentYear) opt.selected = true;
+            yearSelect.appendChild(opt);
+        }
+    }
+
+    function onLoad(json) {
+        if(json && json !== "null") {
+            try { 
+                const parsed = JSON.parse(json);
+                // MIGRATION CHECK: If old format (has "Baby Program" at root), wrap it
+                if(parsed["Baby Program"] && !parsed["periods"]) {
+                    const d = new Date();
+                    const k = `${["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"][d.getMonth()]}-${d.getFullYear()}`;
+                    globalDB = {};
+                    globalDB[k] = { theme: "Migrado", programs: parsed };
+                } else {
+                    globalDB = parsed;
+                }
+            } catch(e) { console.error(e); globalDB = {}; }
+        } else {
+            globalDB = {};
+        }
+        document.getElementById('loader').style.display='none';
+        showHome();
+    }
+
+    // --- HOME & PERIOD LOGIC ---
+    window.showHome = function() {
+        document.querySelectorAll('.view-layer').forEach(el => el.classList.remove('active'));
+        document.getElementById('view-home').classList.add('active');
+        document.getElementById('breadcrumbs').innerText = "Inicio / Configuración";
+        navStack = []; // Reset stack
+        
+        // Auto-select current month if exists? No, let user choose.
+    }
+
+    // CLICK LOAD
+    window.clickLoad = function() {
+        const m = document.getElementById('cfg-month').value;
+        const y = document.getElementById('cfg-year').value;
+        const key = `${m}-${y}`;
+        
+        if(!globalDB[key]) {
+            alert("El periodo " + key + " no existe. Por favor créalo primero.");
+            return;
+        }
+
+        currentPeriodKey = key;
+        db = globalDB[key].programs;
+        
+        switchProgram("Baby Program", document.getElementById('link-baby'));
+    }
+
+    // CLICK CREATE
+    window.clickCreate = function() {
+        // Password check
+        const pass = prompt("Ingrese la clave de administrador para crear un nuevo periodo:");
+        if (pass !== "trumpesmipresidente") {
+            alert("Clave incorrecta. Acceso denegado.");
+            return;
+        }
+
+        const m = document.getElementById('cfg-month').value;
+        const y = document.getElementById('cfg-year').value;
+        const key = `${m}-${y}`;
+
+        if(globalDB[key]) {
+            if(!confirm("El periodo " + key + " ya existe. ¿Deseas sobreescribirlo? (Se perderán los datos anteriores)")) {
+                return;
+            }
+        }
+
+        // Prompt for Theme Name
+        const html = `
+            <div class="form-group">
+                <label class="label">Nombre del Tema Global</label>
+                <input class="input" id="new-theme-name" placeholder="Ej: Tiny Kids Film Studio">
+            </div>
+        `;
+
+        openModal("Crear Nuevo Periodo: " + key, html, () => {
+            const themeName = document.getElementById('new-theme-name').value;
+            if(!themeName) { alert("Debes ingresar un tema."); return false; }
+            
+            // Init new period
+            globalDB[key] = {
+                theme: themeName,
+                programs: JSON.parse(JSON.stringify(emptyProgramDB))
+            };
+            
+            currentPeriodKey = key;
+            db = globalDB[key].programs;
+            
+            // Save immediately
+            saveToCloud(true);
+            
+            // Switch to Dashboard
+            switchProgram("Baby Program", document.getElementById('link-baby'));
+        });
+    }
+
+    // EDIT THEME NAME (from Dashboard)
+    window.editThemeName = function() {
+        if(window.isBackupMode) return; // Read Only
+        const currentTheme = globalDB[currentPeriodKey].theme;
+        const html = `
+            <div class="form-group">
+                <label class="label">Nombre del Tema</label>
+                <input class="input" id="edit-theme-input" value="${currentTheme}">
+            </div>
+        `;
+        
+        openModal("Editar Tema del Periodo", html, () => {
+            const newTheme = document.getElementById('edit-theme-input').value;
+            if(newTheme) {
+                globalDB[currentPeriodKey].theme = newTheme;
+                updateView(); // Refresh header
+                saveToCloud(true);
+            }
+        });
+    }
+
+    // --- NAVIGATION ---
+    window.switchProgram = function(progName, el) {
+        if(!db) { alert("Primero selecciona un periodo en Inicio."); showHome(); return; }
+        
+        currentProgram = progName;
+        document.querySelectorAll('nav a').forEach(a => a.classList.remove('active'));
+        if(el) el.classList.add('active');
+        
+        navStack = [];
+        pushView('dashboard');
+        if(window.innerWidth <= 768) closeMenu();
+    }
+
+    function pushView(viewId, data = null) {
+        navStack.push({ viewId, data });
+        updateView();
+    }
+
+    function goBack() {
+        if(navStack.length <= 1) return;
+        navStack.pop();
+        updateView();
+    }
+
+    function updateView() {
+        if(!db) return; // Guard
+        
+        const current = navStack[navStack.length - 1];
+        const viewId = current.viewId;
+        const data = current.data;
+
+        document.querySelectorAll('.view-layer').forEach(el => el.classList.remove('active'));
+        document.getElementById(`view-${viewId}`).classList.add('active');
+        
+        document.getElementById('btn-back').disabled = navStack.length <= 1;
+        
+        const periodInfo = currentPeriodKey ? ` (${currentPeriodKey})` : "";
+        
+        // Compact Breadcrumbs for mobile
+        let bcText = `${currentProgram} > ${viewId.replace('view-', '').replace('-', ' ').toUpperCase()}`;
+        if(window.innerWidth < 600) {
+            bcText = viewId.replace('view-', '').replace('-', ' ').toUpperCase(); // Show only current view name on mobile
+        }
+        document.getElementById('breadcrumbs').innerText = bcText;
+
+        // Update Dashboard Headers with Theme
+        if(viewId === 'dashboard') {
+            document.getElementById('dash-theme-display').innerText = globalDB[currentPeriodKey].theme;
+            document.getElementById('dash-period-display').innerText = currentPeriodKey;
+            renderDashboard();
+        }
+        
+        if(viewId === 'objective-filter') renderObjectiveFilter(data);
+        if(viewId === 'groups') renderGroups(data);
+        if(viewId === 'activities') renderActivities(data);
+        if(viewId === 'activity-detail') renderActivityDetail(data);
+    }
+
+    // --- RENDERIZADORES ---
+
+    function renderDashboard() {
+        const progData = db[currentProgram];
+        const objCont = document.getElementById('objectives-container');
+        objCont.innerHTML = '';
+        progData.objectives.forEach((obj, idx) => {
+            const displayTitle = obj.title ? obj.title : obj.desc;
+            objCont.innerHTML += `
+                <div class="obj-card" onclick="pushView('objective-filter', ${idx})">
+                    <div class="edit-controls hide-on-backup">
+                        <button class="btn-mini btn-edit" onclick="event.stopPropagation(); editObjective(${idx})"><i class="fas fa-pen"></i></button>
+                        <button class="btn-mini btn-del" onclick="event.stopPropagation(); deleteItem('objectives', ${idx})"><i class="fas fa-trash"></i></button>
+                    </div>
+                    <span class="obj-badge">${obj.id}</span>
+                    <div class="obj-text">${displayTitle}</div>
+                </div>
+            `;
+        });
+        if(!window.isBackupMode) {
+             objCont.innerHTML += `<div class="obj-card hide-on-backup" style="border:2px dashed #cbd5e1; display:flex; align-items:center; justify-content:center; color:#94a3b8; cursor:pointer;" onclick="editObjective()">+ Nuevo Obj</div>`;
+        }
+
+        const weekCont = document.getElementById('weeks-container');
+        weekCont.innerHTML = '';
+        progData.weeks.forEach((week, idx) => {
+            weekCont.innerHTML += `
+                <div class="week-btn-large" onclick="pushView('groups', ${idx})">
+                    <div class="wb-icon"><i class="far fa-calendar-check"></i></div>
+                    <div class="wb-title">${week.id}</div>
+                    <div class="wb-sub">${week.objId}</div>
+                    <div class="edit-controls hide-on-backup">
+                        <button class="btn-mini btn-del" onclick="event.stopPropagation(); deleteItem('weeks', ${idx})"><i class="fas fa-trash"></i></button>
+                    </div>
+                </div>
+            `;
+        });
+        if(!window.isBackupMode) {
+            weekCont.innerHTML += `<div class="week-btn-large hide-on-backup" style="border:2px dashed #cbd5e1;" onclick="editWeek()">+ Nueva Semana</div>`;
+        }
+    }
+
+    function renderObjectiveFilter(objIdx) {
+        const obj = db[currentProgram].objectives[objIdx];
+        document.getElementById('filter-obj-title').innerText = obj.id;
+        document.getElementById('filter-obj-desc').innerText = obj.desc;
+        const cont = document.getElementById('filtered-weeks-container');
+        cont.innerHTML = '';
+        db[currentProgram].weeks.filter(w => w.objId === obj.id).forEach(week => {
+            const realIdx = db[currentProgram].weeks.indexOf(week);
+            cont.innerHTML += `
+                <div class="week-btn-large" onclick="pushView('groups', ${realIdx})">
+                    <div class="wb-icon"><i class="fas fa-star" style="color:var(--baby-color)"></i></div>
+                    <div class="wb-title">${week.id}</div>
+                </div>
+            `;
+        });
+    }
+
+    function renderGroups(weekIdx) {
+        currentWeekId = weekIdx;
+        const week = db[currentProgram].weeks[weekIdx];
+        const obj = db[currentProgram].objectives.find(o => o.id === week.objId);
+
+        document.getElementById('groups-week-title').innerText = week.id;
+        document.getElementById('groups-week-obj').innerText = obj ? obj.id : "Sin Objetivo";
+        
+        // Hide edit button in backup
+        document.querySelector('.btn-edit-info').style.display = window.isBackupMode ? 'none' : 'inline-flex';
+
+        // Render Academic Content Cards (Beautifully)
+        const acGrid = document.getElementById('academic-grid-container');
+        acGrid.innerHTML = '';
+        (week.academic || []).forEach((ac, acIdx) => {
+            acGrid.innerHTML += `
+                <div class="academic-card">
+                    <div class="ac-header">
+                        <span class="ac-title">${ac.title}</span>
+                        <div class="ac-actions hide-on-backup">
+                            <button class="btn-mini btn-edit" onclick="editAcademicContent(${acIdx})"><i class="fas fa-pen"></i></button>
+                            <button class="btn-mini btn-del" onclick="deleteAcademicContent(${acIdx})"><i class="fas fa-trash"></i></button>
+                        </div>
+                    </div>
+                    <div class="ac-content">${ac.content}</div>
+                </div>
+            `;
+        });
+
+        const grpList = document.getElementById('groups-list-container');
+        grpList.innerHTML = '';
+        (week.groups || []).forEach((grp, idx) => {
+            const dateRange = (grp.dateStart && grp.dateEnd) ? `<span style="font-size:0.8rem; color:#64748b; margin-left:10px; display:inline-block;"><i class="far fa-calendar"></i> ${grp.dateStart} - ${grp.dateEnd}</span>` : '';
+            const typeBadge = grp.type ? `<span style="font-size:0.7rem; background:#e0f2fe; color:#0284c7; padding:2px 6px; border-radius:4px; text-transform:uppercase; margin-left:10px;">${grp.type}</span>` : '';
+
+            grpList.innerHTML += `
+                <div class="group-card" onclick="pushView('activities', ${idx})">
+                    <div class="group-info">
+                        <h3 style="margin-bottom:0.2rem;">${grp.name} ${typeBadge}</h3>
+                        <div class="group-meta">${grp.activities.length} Actividades ${dateRange}</div>
+                    </div>
+                    <div style="display:flex; gap:10px;">
+                        <button class="btn-mini btn-del hide-on-backup" onclick="event.stopPropagation(); deleteGroup(${idx})"><i class="fas fa-trash"></i></button>
+                        <div class="arrow-action-btn"><i class="fas fa-chevron-right"></i></div>
+                    </div>
+                </div>
+            `;
+        });
+    }
+
+    function renderActivities(groupIdx) {
+        currentGroupId = groupIdx;
+        const week = db[currentProgram].weeks[currentWeekId];
+        const group = week.groups[groupIdx];
+
+        document.getElementById('act-group-name').innerText = group.name;
+        document.getElementById('act-week-title').innerText = week.id;
+
+        // Populate new header info
+        const typeHtml = group.type ? `<span style="background:#dbeafe; color:#1e40af; padding:5px 12px; border-radius:20px; font-weight:bold; font-size:1.1rem;">${group.type}</span>` : '';
+        const dateHtml = (group.dateStart && group.dateEnd) ? `<i class="far fa-calendar-alt"></i> ${group.dateStart} al ${group.dateEnd}` : '';
+        
+        document.getElementById('act-type-badge').innerHTML = typeHtml;
+        document.getElementById('act-date-range').innerHTML = dateHtml;
+        
+        // Hide edit button in backup
+        const btnEdit = document.querySelector('#view-activities .btn-edit-info');
+        if(btnEdit) btnEdit.style.display = window.isBackupMode ? 'none' : 'inline-flex';
+
+        const list = document.getElementById('activities-container');
+        list.innerHTML = '';
+        (group.activities || []).forEach((act, idx) => {
+            list.innerHTML += `
+                <div class="activity-card" onclick="pushView('activity-detail', ${idx})">
+                    <div class="activity-card-left">
+                        <div class="activity-number">${idx + 1}</div>
+                        <div class="activity-info">
+                            <h3 class="activity-title">${act.title}</h3>
+                            <div class="activity-meta"><span class="activity-pilar">${act.pillar || ''}</span></div>
+                        </div>
+                    </div>
+                    <div class="activity-card-right">
+                        <button class="btn-mini btn-del hide-on-backup" onclick="event.stopPropagation(); deleteActivity(${idx})"><i class="fas fa-trash"></i></button>
+                        <i class="fas fa-chevron-right activity-arrow"></i>
+                    </div>
+                </div>
+            `;
+        });
+    }
+
+    function renderActivityDetail(actIdx) {
+        currentActId = actIdx;
+        const week = db[currentProgram].weeks[currentWeekId];
+        const group = week.groups[currentGroupId];
+        const act = group.activities[actIdx];
+        const obj = db[currentProgram].objectives.find(o => o.id === week.objId);
+
+        // Header Info
+        document.getElementById('det-num').innerText = `ACTIVIDAD ${actIdx + 1}`;
+        document.getElementById('det-title').innerText = act.title;
+        
+        // --- NEW HEADER STRUCTURE IMPLEMENTATION ---
+        document.getElementById('det-pilar-display').innerText = act.pillar || '';
+        document.getElementById('det-week-info').innerText = week.id;
+        document.getElementById('det-obj-info').innerText = obj ? obj.id : 'N/A';
+        
+        let acInfoHtml = '';
+        if (week.academic && week.academic.length > 0) {
+            week.academic.forEach(ac => {
+                acInfoHtml += `• ${ac.title}: ${ac.content.substring(0, 50)}...<br>`;
+            });
+        } else {
+            acInfoHtml = 'Sin contenido académico registrado.';
+        }
+        document.getElementById('det-academic-info').innerHTML = acInfoHtml;
+        // -------------------------------------------
+
+        document.getElementById('det-desc').innerHTML = act.desc;
+        document.getElementById('det-res-type').innerText = act.resType;
+        
+        // Resources Logic
+        const resContainer = document.getElementById('det-res-content');
+        if (act.resInputType === 'Link' && act.resLink) {
+             resContainer.innerHTML = `<a href="${act.resLink}" target="_blank" style="color:var(--primary); font-weight:bold; text-decoration:none; display:inline-flex; align-items:center; gap:5px;"><i class="fas fa-external-link-alt"></i> Ver Recurso</a>`;
+        } else if (act.resText) {
+             // Es texto rico
+             resContainer.innerHTML = `<div style="font-size:0.95rem; color:#334155; line-height:1.6;">${act.resText}</div>`;
+        } else {
+             resContainer.innerHTML = '<span style="color:#94a3b8; font-style:italic;">No hay recursos asignados.</span>';
+        }
+
+        // Status Selector
+        const statusContainer = document.getElementById('status-selector-container');
+        const statuses = ["Pendiente", "En Proceso", "Creado"];
+        const currentStatus = act.resourceStatus || "Pendiente";
+        
+        // Disable buttons in backup mode
+        const onclickAttr = window.isBackupMode ? '' : `onclick="updateResourceStatus('\${s}')"`;
+        const cursorStyle = window.isBackupMode ? 'cursor:default;' : '';
+
+        statusContainer.innerHTML = statuses.map(s => 
+            `<button class="status-btn ${currentStatus === s ? 'active' : ''}" style="${cursorStyle}" data-val="${s}" ${onclickAttr}>${s}</button>`
+        ).join('');
+    }
+
+    window.toggleContext = function() {
+        const content = document.getElementById('ctx-content');
+        const chevron = document.getElementById('ctx-chevron');
+        if (content.style.display === 'none') {
+            content.style.display = 'block';
+            chevron.classList.remove('fa-chevron-down');
+            chevron.classList.add('fa-chevron-up');
+        } else {
+            content.style.display = 'none';
+            chevron.classList.remove('fa-chevron-up');
+            chevron.classList.add('fa-chevron-down');
+        }
+    }
+
+    function updateResourceStatus(newStatus) {
+        if(window.isBackupMode) return;
+        db[currentProgram].weeks[currentWeekId].groups[currentGroupId].activities[currentActId].resourceStatus = newStatus;
+        const buttons = document.querySelectorAll('.status-btn');
+        buttons.forEach(btn => {
+            if(btn.dataset.val === newStatus) btn.classList.add('active');
+            else btn.classList.remove('active');
+        });
+        // Note: Auto-save will pick this up in 3 mins, or user can manual save.
+    }
+
+    // --- SAVE LOGIC ---
+    
+    function autoSave() {
+        if(window.isBackupMode) return;
+        saveToCloud(true);
+    }
+
+    window.saveToCloud = function(isAuto = false) {
+        if(!globalDB || window.isBackupMode) return;
+        
+        const btn = document.querySelector('.back-btn[onclick="saveToCloud()"]');
+        const toast = document.getElementById('save-toast');
+        
+        if(!isAuto) {
+            var oldBtn = btn.innerHTML;
+            btn.innerHTML = "Guardando...";
+        }
+
+        if(typeof google === 'undefined') {
+            // Local fallback simulation
+             if(!isAuto) {
+                btn.innerHTML = "Local (No Save)";
+                setTimeout(() => btn.innerHTML = oldBtn, 2000);
+            }
+            return;
+        }
+
+        google.script.run.withSuccessHandler(() => {
+            if(!isAuto) {
+                btn.innerHTML = "Guardado!";
+                setTimeout(() => btn.innerHTML = oldBtn, 2000);
+            } else {
+                // Show tiny toast
+                toast.classList.add('show');
+                setTimeout(() => toast.classList.remove('show'), 2000);
+            }
+        }).saveDataToSheet(JSON.stringify(globalDB));
+    }
+
+
+    // --- MODALES Y LÓGICA DE EDICIÓN ---
+
+    // 1. OBJETIVO (Sin Título, Selector ID)
+    window.editObjective = function(idx = null) {
+        if(window.isBackupMode) return;
+        const isNew = idx === null;
+        const obj = isNew ? { id: "OBJ 1", title: "", desc: "" } : db[currentProgram].objectives[idx];
+        let idOptions = "";
+        for(let i=1; i<=6; i++){ let val = `OBJ ${i}`; let sel = (obj.id === val) ? "selected" : ""; idOptions += `<option value="${val}" ${sel}>${val}</option>`; }
+        
+        const html = `
+            <div class="form-group"><label class="label">ID</label><select class="select" id="m-id">${idOptions}</select></div>
+            <div class="form-group"><label class="label">Descripción</label><textarea class="input" id="m-desc" rows="4">${obj.desc}</textarea></div>
+        `;
+        openModal(isNew?"Nuevo Objetivo":"Editar Objetivo", html, () => {
+            const newObj = { id: document.getElementById('m-id').value, title: "", desc: document.getElementById('m-desc').value };
+            if(isNew) db[currentProgram].objectives.push(newObj); else db[currentProgram].objectives[idx] = newObj;
+            renderDashboard();
+        });
+    }
+
+    // 2. SEMANA (ID, Objetivo) - REMOVED TITLE & PILLAR
+    window.editWeek = function(idx = null) {
+        if(window.isBackupMode) return;
+        if (db[currentProgram].objectives.length === 0) {
+            alert("No hay objetivos creados. Por favor crea un objetivo primero.");
+            return;
+        }
+
+        // Logic fix: Don't rely on currentWeekId fallback if idx is null (create mode)
+        const weekIdx = idx; // Simply use the passed idx (null if new)
+        const w = (weekIdx !== null) ? db[currentProgram].weeks[weekIdx] : { id: "Week 01", title: "", objId: "", academic: [] };
+        
+        const opts = db[currentProgram].objectives.map(o => `<option value="${o.id}" ${w.objId===o.id?'selected':''}>${o.id} - ${o.desc.substring(0,30)}...</option>`).join('');
+        const weekOptions = ["Week 01", "Week 02", "Week 03", "Week 04", "Week 05"].map(v => `<option value="${v}" ${w.id===v?'selected':''}>${v}</option>`).join('');
+
+        const html = `
+            <div class="form-group"><label class="label">Semana ID</label><select class="select" id="m-wid">${weekOptions}</select></div>
+            <div class="form-group"><label class="label">Objetivo</label><select class="select" id="m-wobj">${opts}</select></div>
+            <p style="font-size:0.8rem; color:#64748b;">* El contenido académico se edita directamente en la pantalla de la semana.</p>
+        `;
+
+        openModal(weekIdx===null?"Nueva Semana":"Editar Semana", html, () => {
+            const newWeek = {
+                id: document.getElementById('m-wid').value,
+                title: "", // Not used anymore
+                objId: document.getElementById('m-wobj').value,
+                academic: w.academic || [], // Keep existing
+                groups: w.groups || [] 
+            };
+            if(weekIdx !== null) db[currentProgram].weeks[weekIdx] = newWeek;
+            else db[currentProgram].weeks.push(newWeek);
+            
+            if(navStack[navStack.length-1].viewId === 'dashboard') renderDashboard();
+            else renderGroups(currentWeekId);
+        });
+    }
+    
+    window.editCurrentWeekMetadata = function() { editWeek(currentWeekId); }
+
+    // 3. CONTENIDO ACADÉMICO (Individual)
+    window.addAcademicContent = function() { editAcademicContent(null); }
+    window.editAcademicContent = function(acIdx) {
+        if(window.isBackupMode) return;
+        const week = db[currentProgram].weeks[currentWeekId];
+        const isNew = acIdx === null;
+        const ac = isNew ? { title: "", content: "" } : week.academic[acIdx];
+
+        const html = `
+            <div class="form-group"><label class="label">Título (Ej: Vocab)</label><input class="input" id="ac-title" value="${ac.title}"></div>
+            <div class="form-group">
+                <label class="label">Contenido</label>
+                <div class="toolbar">
+                    <button class="tool-btn" onclick="fmt('bold')">B</button>
+                    <button class="tool-btn" onclick="fmt('italic')">I</button>
+                    <button class="tool-btn" onclick="fmt('insertUnorderedList')">List</button>
+                    <select class="font-size-select" onchange="fmt('fontSize', this.value)">
+                         <option value="3">Normal</option>
+                         <option value="1">Pequeño</option>
+                         <option value="5">Grande</option>
+                         <option value="7">Enorme</option>
+                    </select>
+                </div>
+                <div class="editor-box" id="ac-content" contenteditable="true">${ac.content}</div>
+            </div>
+        `;
+
+        openModal(isNew?"Agregar Contenido":"Editar Contenido", html, () => {
+            const newItem = {
+                title: document.getElementById('ac-title').value,
+                content: document.getElementById('ac-content').innerHTML
+            };
+            if(!week.academic) week.academic = [];
+            
+            if(isNew) week.academic.push(newItem);
+            else week.academic[acIdx] = newItem;
+            
+            renderGroups(currentWeekId);
+        });
+    }
+
+    window.deleteAcademicContent = function(idx) {
+        if(window.isBackupMode) return;
+        if(confirm("¿Eliminar este contenido?")) {
+            db[currentProgram].weeks[currentWeekId].academic.splice(idx, 1);
+            renderGroups(currentWeekId);
+        }
+    }
+
+    // 3. DIA / GRUPO (ADD)
+    window.addGroup = function() {
+        if(window.isBackupMode) return;
+        const options = ["Lunes y Martes", "Miércoles y Jueves", "Viernes y Sábado"]
+            .map(opt => `<option value="${opt}">${opt}</option>`)
+            .join('');
+        
+        const typeOptions = ["Contenido Regular", "Evaluaciones", "Celebraciones", "Feriados", "Review"]
+            .map(opt => `<option value="${opt}">${opt}</option>`)
+            .join('');
+
+        const html = `
+            <div class="form-group">
+                <label class="label">Días de Clase</label>
+                <select class="select" id="m-gname">${options}</select>
+            </div>
+            <div class="form-group">
+                <label class="label">Selecciona el Lunes de la Semana</label>
+                <input type="date" class="input" id="m-gmonday" onchange="validateMonday(this)">
+                <div class="error-msg" id="err-monday">Por favor, selecciona un día Lunes.</div>
+                <p style="font-size:0.8rem; color:#64748b; margin-top:5px;"><i class="fas fa-info-circle"></i> Se marcará automáticamente la semana (Lun - Sáb).</p>
+            </div>
+            <div class="form-group">
+                <label class="label">Tipo de Contenido</label>
+                <select class="select" id="m-gtype">${typeOptions}</select>
+            </div>
+        `;
+        openModal("Agregar Día/Grupo", html, () => {
+            const name = document.getElementById('m-gname').value;
+            const mondayInput = document.getElementById('m-gmonday');
+            const start = mondayInput.value;
+            const type = document.getElementById('m-gtype').value;
+            
+            if(!validateMonday(mondayInput)) {
+                alert("Debes seleccionar un Lunes.");
+                return false; 
+            }
+            const end = calculateSaturday(start);
+
+            if(name) {
+                if(!db[currentProgram].weeks[currentWeekId].groups) db[currentProgram].weeks[currentWeekId].groups = [];
+                db[currentProgram].weeks[currentWeekId].groups.push({ 
+                    name: name, dateStart: start, dateEnd: end, type: type, activities: [] 
+                });
+                renderGroups(currentWeekId);
+            }
+        });
+    }
+
+    // NEW: EDIT GROUP METADATA (from Activity View)
+    window.editCurrentGroupMetadata = function() {
+        if(window.isBackupMode) return;
+        const grp = db[currentProgram].weeks[currentWeekId].groups[currentGroupId];
+        const options = ["Lunes y Martes", "Miércoles y Jueves", "Viernes y Sábado"]
+            .map(opt => `<option value="${opt}" ${grp.name===opt?'selected':''}>${opt}</option>`).join('');
+        
+        const typeOptions = ["Contenido Regular", "Evaluaciones", "Celebraciones", "Feriados", "Review"]
+            .map(opt => `<option value="${opt}" ${grp.type===opt?'selected':''}>${opt}</option>`).join('');
+
+        const html = `
+            <div class="form-group">
+                <label class="label">Días de Clase</label>
+                <select class="select" id="m-gname-edit">${options}</select>
+            </div>
+            <div class="form-group">
+                <label class="label">Selecciona el Lunes</label>
+                <input type="date" class="input" id="m-gmonday-edit" value="${grp.dateStart || ''}" onchange="validateMonday(this)">
+                <div class="error-msg" id="err-monday">Selecciona un Lunes.</div>
+            </div>
+            <div class="form-group">
+                <label class="label">Tipo de Contenido</label>
+                <select class="select" id="m-gtype-edit">${typeOptions}</select>
+            </div>
+        `;
+        
+        openModal("Editar Info Grupo", html, () => {
+             const mondayInput = document.getElementById('m-gmonday-edit');
+             if(!validateMonday(mondayInput)) { alert("Selecciona Lunes"); return false; }
+             
+             grp.name = document.getElementById('m-gname-edit').value;
+             grp.dateStart = mondayInput.value;
+             grp.dateEnd = calculateSaturday(mondayInput.value);
+             grp.type = document.getElementById('m-gtype-edit').value;
+             
+             renderActivities(currentGroupId);
+        });
+    }
+
+    window.calculateSaturday = function(mondayDateStr) {
+        if (!mondayDateStr) return "";
+        const date = new Date(mondayDateStr + 'T12:00:00'); 
+        date.setDate(date.getDate() + 5); 
+        return date.toISOString().split('T')[0];
+    }
+
+    window.validateMonday = function(input) {
+        const err = input.parentElement.querySelector('.error-msg');
+        if (!input.value) return false;
+        const d = new Date(input.value + 'T12:00:00');
+        if (d.getDay() !== 1) {
+            input.classList.add('input-error');
+            if(err) err.style.display = 'block';
+            return false;
+        } else {
+            input.classList.remove('input-error');
+            if(err) err.style.display = 'none';
+            return true;
+        }
+    }
+
+    window.addActivity = function() { editCurrentActivity(true); }
+    window.editCurrentActivity = function(isNew = false) {
+        if(window.isBackupMode) return;
+        const act = isNew ? { title:"", pillar:"Speaking", desc:"", resType:"Tablet", resLink:"", resInputType:"Link", resText: "" } 
+                          : db[currentProgram].weeks[currentWeekId].groups[currentGroupId].activities[currentActId];
+        
+        const pillars = ["Phonics", "Writing", "Listening", "Speaking", "Pre-reading", "Extra"];
+        const pOpts = pillars.map(p => `<option ${act.pillar===p?'selected':''}>${p}</option>`).join('');
+        const rOpts = ["Tablet", "A mano", "Impreso", "Historia", "Musica"].map(r => `<option ${act.resType===r?'selected':''}>${r}</option>`).join('');
+
+        const showLink = !act.resInputType || act.resInputType === 'Link';
+        
+        const html = `
+            <div class="form-group"><label class="label">Título</label><input class="input" id="m-atitle" value="${act.title}"></div>
+            <div class="form-group"><label class="label">Pilar</label><select class="select" id="m-apillar">${pOpts}</select></div>
+            <div class="form-group">
+                <label class="label">Descripción</label>
+                <div class="toolbar">
+                    <button class="tool-btn" onclick="fmt('bold')">B</button>
+                    <button class="tool-btn" onclick="fmt('italic')">I</button>
+                    <button class="tool-btn" onclick="fmt('insertUnorderedList')">List</button>
+                    <select class="font-size-select" onchange="fmt('fontSize', this.value)">
+                         <option value="3">Normal</option>
+                         <option value="1">Pequeño</option>
+                         <option value="5">Grande</option>
+                         <option value="7">Enorme</option>
+                    </select>
+                </div>
+                <div class="editor-box" id="m-adesc" contenteditable="true">${act.desc}</div>
+            </div>
+            
+            <div class="form-group"><label class="label">Tipo Recurso</label><select class="select" id="m-atype">${rOpts}</select></div>
+            
+            <div class="form-group">
+                <label class="label">Entrada del Recurso</label>
+                <select class="select" id="m-ainputtype" onchange="toggleResInput()">
+                    <option value="Link" ${showLink ? 'selected' : ''}>Enlace / URL</option>
+                    <option value="Text" ${!showLink ? 'selected' : ''}>Lista de Texto</option>
+                </select>
+            </div>
+
+            <div id="res-input-link" class="form-group" style="display:${showLink ? 'block' : 'none'}">
+                <label class="label">Pegar Link</label>
+                <input class="input" id="m-alink" value="${act.resLink || ''}">
+            </div>
+
+            <div id="res-input-text" class="form-group" style="display:${!showLink ? 'block' : 'none'}">
+                <label class="label">Lista de Materiales</label>
+                <div class="toolbar">
+                    <button class="tool-btn" onclick="document.execCommand('bold',false,null)">B</button>
+                    <button class="tool-btn" onclick="document.execCommand('insertUnorderedList',false,null)">List</button>
+                </div>
+                <div class="editor-box" id="m-restext" contenteditable="true" style="min-height:80px;">${act.resText || ''}</div>
+            </div>
+        `;
+
+        openModal(isNew?"Nueva Actividad":"Editar Actividad", html, () => {
+            const inputType = document.getElementById('m-ainputtype').value;
+            const newAct = {
+                title: document.getElementById('m-atitle').value,
+                pillar: document.getElementById('m-apillar').value,
+                desc: document.getElementById('m-adesc').innerHTML,
+                resType: document.getElementById('m-atype').value,
+                resInputType: inputType,
+                resLink: inputType === 'Link' ? document.getElementById('m-alink').value : '',
+                resText: inputType === 'Text' ? document.getElementById('m-restext').innerHTML : '',
+                resourceStatus: act.resourceStatus || "Pendiente" 
+            };
+            const grp = db[currentProgram].weeks[currentWeekId].groups[currentGroupId];
+            if(isNew) grp.activities.push(newAct);
+            else grp.activities[currentActId] = newAct;
+            
+            if(isNew) renderActivities(currentGroupId); else renderActivityDetail(currentActId);
+        });
+    }
+    
+    window.toggleResInput = function() {
+        const val = document.getElementById('m-ainputtype').value;
+        document.getElementById('res-input-link').style.display = val === 'Link' ? 'block' : 'none';
+        document.getElementById('res-input-text').style.display = val === 'Text' ? 'block' : 'none';
+    }
+
+    // --- UTILS ---
+    window.deleteItem = function(t, i) { if(window.isBackupMode) return; if(confirm("¿Eliminar?")) { db[currentProgram][t].splice(i, 1); renderDashboard(); } }
+    window.deleteGroup = function(i) { if(window.isBackupMode) return; if(confirm("¿Eliminar Grupo?")) { db[currentProgram].weeks[currentWeekId].groups.splice(i, 1); renderGroups(currentWeekId); } }
+    window.deleteActivity = function(i) { if(window.isBackupMode) return; if(confirm("¿Eliminar Actividad?")) { db[currentProgram].weeks[currentWeekId].groups[currentGroupId].activities.splice(i, 1); renderActivities(currentGroupId); } }
+
+    let onModalSave = null;
+    function openModal(title, content, onSave) {
+        if(window.isBackupMode) return;
+        document.getElementById('modal-title').innerText = title;
+        document.getElementById('modal-body').innerHTML = content;
+        document.getElementById('editor-modal').classList.add('open');
+        onModalSave = () => { 
+            if(onSave() !== false) closeModal(); 
+        };
+    }
+    document.getElementById('modal-save-btn').onclick = () => { if(onModalSave) onModalSave(); };
+    window.closeModal = () => document.getElementById('editor-modal').classList.remove('open');
+    window.fmt = (c,v=null) => document.execCommand(c,false,v);
+    
+    window.toggleMenu = () => {
+        const sb = document.getElementById('sidebar');
+        sb.style.transform = sb.style.transform === 'translateX(0px)' ? 'translateX(-100%)' : 'translateX(0px)';
+        const overlay = document.getElementById('overlay');
+        overlay.style.display = sb.style.transform === 'translateX(0px)' ? 'block' : 'none';
+        if(overlay.style.display === 'block') overlay.classList.add('active'); else overlay.classList.remove('active');
+    }
+    window.closeMenu = () => {
+        document.getElementById('sidebar').style.transform = 'translateX(-100%)';
+        const overlay = document.getElementById('overlay');
+        overlay.style.display = 'none';
+        overlay.classList.remove('active');
+    }
+</script>
+</body>
+</html>
